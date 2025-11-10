@@ -14,7 +14,6 @@ from config import (
 )
 from train import NetflixClassifier
 
-# Setup logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class ModelTester:
         """Load trained model"""
         logger.info(f"Loading {self.model_type} model...")
         
-        # Load label encoder
+
         le_path = MODELS_DIR / 'label_encoder.pkl'
         if le_path.exists():
             self.label_encoder = joblib.load(le_path)
@@ -51,8 +50,6 @@ class ModelTester:
             
         elif self.model_type == 'neural_network':
             model_path = MODELS_DIR / 'neural_network_model.pth'
-            # Need to reconstruct model architecture
-            # This is a simplified version - in production, save architecture too
             self.model = NetflixClassifier(input_size=10, hidden_size=128, num_classes=2)
             self.model.load_state_dict(torch.load(model_path))
             self.model = self.model.to(self.device)
@@ -78,7 +75,6 @@ class ModelTester:
         X_test = df[numeric_cols].fillna(0)
         y_test = df[target_col]
         
-        # Encode target if string
         if y_test.dtype == 'object' and self.label_encoder:
             y_test = self.label_encoder.transform(y_test)
         
@@ -117,11 +113,9 @@ class ModelTester:
         logger.info("MODEL EVALUATION RESULTS")
         logger.info("="*50)
         
-        # Calculate metrics
         accuracy = accuracy_score(y_test, y_pred)
         logger.info(f"Accuracy: {accuracy:.4f}")
-        
-        # Classification report
+
         if self.label_encoder:
             target_names = self.label_encoder.classes_
         else:
@@ -130,10 +124,8 @@ class ModelTester:
         print("\nClassification Report:")
         print(classification_report(y_test, y_pred, target_names=target_names))
         
-        # Confusion matrix
         cm = confusion_matrix(y_test, y_pred)
         
-        # Plot confusion matrix
         plt.figure(figsize=(8, 6))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                     xticklabels=target_names, yticklabels=target_names)
@@ -141,7 +133,6 @@ class ModelTester:
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         
-        # Save plot
         plot_path = OUTPUTS_DIR / 'confusion_matrix.png'
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         logger.info(f"Confusion matrix saved to {plot_path}")
@@ -159,7 +150,7 @@ class ModelTester:
         Returns:
             Prediction and probability
         """
-        # Convert to DataFrame
+
         df_single = pd.DataFrame([features])
         
         if self.model_type == 'random_forest':
@@ -180,33 +171,26 @@ def main():
     logger.info("STARTING MODEL TESTING")
     logger.info("="*50)
     
-    # Load processed data
+
     logger.info(f"Loading data from {PROCESSED_DATA_FILE}")
     df = pd.read_csv(PROCESSED_DATA_FILE)
     
-    # Initialize tester
     tester = ModelTester(model_type='random_forest')
     
-    # Load model
     tester.load_model()
     
-    # Prepare test data
     X, y = tester.prepare_test_data(df, target_col='type')
     
-    # Split to get test set (same random state as training)
     from sklearn.model_selection import train_test_split
     _, X_test, _, y_test = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
     
-    # Make predictions
     logger.info("Making predictions on test set...")
     y_pred = tester.predict(X_test)
     
-    # Evaluate
     accuracy = tester.evaluate(y_test, y_pred)
     
-    # Test single prediction
     logger.info("\n" + "="*50)
     logger.info("TESTING SINGLE PREDICTION")
     logger.info("="*50)

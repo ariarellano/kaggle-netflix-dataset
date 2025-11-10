@@ -8,7 +8,6 @@ from typing import Optional
 
 from config import RAW_DATA_FILE, LOG_FORMAT, LOG_LEVEL
 
-# Setup logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
@@ -87,7 +86,6 @@ class NetflixDataLoader:
 
 
 if __name__ == "__main__":
-    # Example usage
     loader = NetflixDataLoader()
     data = loader.load_data()
     

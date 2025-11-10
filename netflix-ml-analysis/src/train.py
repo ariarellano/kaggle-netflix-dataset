@@ -16,7 +16,6 @@ from config import (
 )
 from preprocessing import NetflixPreprocessor
 
-# Setup logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
@@ -87,22 +86,18 @@ class ModelTrainer:
         """
         logger.info(f"Preparing data for {self.model_type} model")
         
-        # Select numeric features for modeling
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         
-        # Remove target if it's numeric
         if target_col in numeric_cols:
             numeric_cols.remove(target_col)
         
         X = df[numeric_cols].fillna(0)
         y = df[target_col]
         
-        # Encode target if it's not already numeric
         if y.dtype == 'object':
             from sklearn.preprocessing import LabelEncoder
             le = LabelEncoder()
             y = le.fit_transform(y)
-            # Save label encoder
             joblib.dump(le, MODELS_DIR / 'label_encoder.pkl')
             logger.info(f"Target classes: {le.classes_}")
         
@@ -121,7 +116,6 @@ class ModelTrainer:
         
         self.model.fit(X_train, y_train)
         
-        # Save model
         model_path = MODELS_DIR / 'random_forest_model.pkl'
         joblib.dump(self.model, model_path)
         logger.info(f"Model saved to {model_path}")
@@ -132,30 +126,25 @@ class ModelTrainer:
         """Train Neural Network model"""
         logger.info("Training Neural Network model...")
         
-        # Create datasets and dataloaders
         train_dataset = NetflixDataset(X_train, y_train)
         val_dataset = NetflixDataset(X_val, y_val)
         
         train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
         
-        # Initialize model
         input_size = X_train.shape[1]
         num_classes = len(np.unique(y_train))
         hidden_size = 128
         
         self.model = NetflixClassifier(input_size, hidden_size, num_classes).to(self.device)
         
-        # Loss and optimizer
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
         
-        # Training loop
         train_losses = []
         val_accuracies = []
         
         for epoch in range(EPOCHS):
-            # Training phase
             self.model.train()
             train_loss = 0
             for batch_X, batch_y in train_loader:
@@ -172,7 +161,6 @@ class ModelTrainer:
             avg_train_loss = train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
             
-            # Validation phase
             self.model.eval()
             val_correct = 0
             val_total = 0
@@ -190,7 +178,6 @@ class ModelTrainer:
             
             logger.info(f"Epoch [{epoch+1}/{EPOCHS}] - Loss: {avg_train_loss:.4f}, Val Acc: {val_accuracy:.2f}%")
         
-        # Save model
         model_path = MODELS_DIR / 'neural_network_model.pth'
         torch.save(self.model.state_dict(), model_path)
         logger.info(f"Model saved to {model_path}")
@@ -204,27 +191,21 @@ def main():
     logger.info("STARTING MODEL TRAINING")
     logger.info("="*50)
     
-    # Load processed data
     logger.info(f"Loading data from {PROCESSED_DATA_FILE}")
     df = pd.read_csv(PROCESSED_DATA_FILE)
     
-    # Initialize trainer (change to 'neural_network' if you want to use PyTorch)
     trainer = ModelTrainer(model_type='random_forest')
     
-    # Prepare data
     X, y = trainer.prepare_data(df, target_col='type')
     
-    # Split data
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
     
-    # Train model
     if trainer.model_type == 'random_forest':
         model = trainer.train_random_forest(X_train, y_train)
         
-        # Evaluate on test set
         y_pred = model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
         
@@ -235,7 +216,6 @@ def main():
         print(classification_report(y_test, y_pred))
     
     elif trainer.model_type == 'neural_network':
-        # Split train into train and validation
         X_train, X_val, y_train, y_val = train_test_split(
             X_train, y_train, test_size=0.2, random_state=RANDOM_STATE
         )

@@ -11,7 +11,7 @@ from config import (
 )
 from data_loader import NetflixDataLoader
 
-# Setup logging
+#logging
 logging.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
@@ -36,23 +36,21 @@ class NetflixPreprocessor:
         logger.info("Starting data cleaning...")
         initial_rows = len(df)
         
-        # Create a copy to avoid modifying original
         df_clean = df.copy()
         
-        # Handle missing values
+
         logger.info("Handling missing values...")
         
-        # Fill missing directors/cast with 'Unknown'
+        # fill na with 'Unknown'
         text_cols = ['director', 'cast', 'country']
         for col in text_cols:
             if col in df_clean.columns:
                 df_clean[col] = df_clean[col].fillna('Unknown')
         
-        # Fill missing dates
         if 'date_added' in df_clean.columns:
             df_clean['date_added'] = df_clean['date_added'].fillna('Unknown')
         
-        # Drop rows with missing rating (if it's your target variable)
+
         if 'rating' in df_clean.columns:
             df_clean = df_clean.dropna(subset=['rating'])
         
@@ -75,27 +73,22 @@ class NetflixPreprocessor:
         logger.info("Performing feature engineering...")
         df_fe = df.copy()
         
-        # Extract year from date_added if available
         if 'date_added' in df_fe.columns:
             df_fe['year_added'] = pd.to_datetime(
                 df_fe['date_added'], 
                 errors='coerce'
             ).dt.year
         
-        # Calculate content age (current year - release year)
         if 'release_year' in df_fe.columns:
             current_year = 2025
             df_fe['content_age'] = current_year - df_fe['release_year']
         
-        # Extract duration as numeric (remove 'min' or 'Season')
         if 'duration' in df_fe.columns:
             df_fe['duration_numeric'] = df_fe['duration'].str.extract('(\d+)').astype(float)
         
-        # Count number of countries
         if 'country' in df_fe.columns:
             df_fe['num_countries'] = df_fe['country'].str.split(',').str.len()
         
-        # Count cast members
         if 'cast' in df_fe.columns:
             df_fe['num_cast'] = df_fe['cast'].apply(
                 lambda x: 0 if x == 'Unknown' else len(str(x).split(','))
@@ -145,7 +138,6 @@ class NetflixPreprocessor:
         """
         logger.info(f"Splitting data with test_size={TEST_SIZE}, random_state={RANDOM_STATE}")
         
-        # Separate features and target
         X = df.drop(columns=[target_col])
         y = df[target_col]
         
@@ -172,17 +164,13 @@ class NetflixPreprocessor:
         logger.info("STARTING PREPROCESSING PIPELINE")
         logger.info("="*50)
         
-        # Step 1: Clean data
         df_clean = self.clean_data(df)
         
-        # Step 2: Feature engineering
         df_features = self.feature_engineering(df_clean)
         
-        # Step 3: Encode categorical variables
         categorical_cols = ['type', 'rating', 'country']
         df_processed = self.encode_categorical(df_features, categorical_cols)
         
-        # Save processed data
         logger.info(f"Saving processed data to {PROCESSED_DATA_FILE}")
         df_processed.to_csv(PROCESSED_DATA_FILE, index=False)
         
@@ -194,11 +182,8 @@ class NetflixPreprocessor:
 
 
 if __name__ == "__main__":
-    # Load data
     loader = NetflixDataLoader()
     raw_data = loader.load_data()
-    
-    # Preprocess
     preprocessor = NetflixPreprocessor()
     processed_data = preprocessor.preprocess_pipeline(raw_data)
     
